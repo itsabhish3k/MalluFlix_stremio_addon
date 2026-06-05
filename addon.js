@@ -25,12 +25,10 @@ const GENRES = {
     "Thriller": 53
 };
 
-function createManifest(options = {}) {
-    const configured = Boolean(options.configured);
-
+function createManifest() {
     return {
         id: "org.mallu.flix",
-        version: "3.1.0",
+        version: "3.2.0",
         name: "MalluFlix",
         description: "Malayalam movie catalog using TMDB discovery + Cinemeta compatibility",
         logo: "https://forzayt.github.io/MalluFlix_stremio_addon/images/logo.jpg",
@@ -65,8 +63,6 @@ function createManifest(options = {}) {
         idPrefixes: ["tt"],
         behaviorHints: {
             adult: false,
-            configurable: true,
-            configurationRequired: !configured,
             p2p: false
         }
     };
@@ -76,9 +72,7 @@ function createAddonInterface(options = {}) {
     const tmdbKey = options.tmdbKey || DEFAULT_TMDB_KEY;
     const tmdbAccessToken = (options.tmdbAccessToken || DEFAULT_TMDB_ACCESS_TOKEN).replace(/^Bearer\s+/i, "");
     const cache = new Map();
-    const builder = new addonBuilder(createManifest({
-        configured: Boolean(options.tmdbKey && options.tmdbAccessToken)
-    }));
+    const builder = new addonBuilder(createManifest());
 
     async function fetchWithCache(url, config = {}) {
         const key = url + JSON.stringify(config.params || {}) + JSON.stringify(config.headers || {});

@@ -10,3 +10,7 @@ services:
     envVars:
       - key: NODE_VERSION
         value: 20
+      - key: TMDB_API_KEY
+        sync: false
+      - key: TMDB_ACCESS_TOKEN
+        sync: false

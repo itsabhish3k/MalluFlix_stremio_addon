@@ -209,27 +209,11 @@
 
 
         </div>
-        <div class="config-panel">
-          <label for="tmdbKeyInput">TMDB API key</label>
-          <div class="config-row">
-            <input id="tmdbKeyInput" type="password" placeholder="Paste your TMDB API key" autocomplete="off">
-          </div>
-          <label for="tmdbAccessTokenInput">TMDB read access token</label>
-          <div class="config-row">
-            <input id="tmdbAccessTokenInput" type="password" placeholder="Paste your TMDB API read access token" autocomplete="off">
-            <button id="updateConfigButton" class="manifest-copy-button" type="button">Update Links</button>
-          </div>
-          <div class="config-actions">
-            <a id="webInstallLink" href="#" target="_blank" rel="noreferrer">Open in Stremio Web</a>
-            <a id="desktopInstallLink" href="#">Install in Stremio Desktop</a>
-          </div>
-        </div>
         <p class="mt-4 text-sm text-center text-slate-500">
-          Stremio Desktop must be installed for the Install button to open.
-          <br>
-          If nothing opens, copy this manifest URL into Stremio:
+          Install from the hosted manifest:
           <code id="manifestUrl" class="manifest-url"></code>
           <button id="copyManifestButton" class="manifest-copy-button" type="button">Copy</button>
+          <a id="webInstallLink" class="web-install-link" href="#" target="_blank" rel="noreferrer">Open in Stremio Web</a>
           <span id="copyStatus" class="copy-status" aria-live="polite"></span>
         </p>
       </div>
@@ -247,65 +231,25 @@
 
   <script>
     const webBaseUrl = "https://web.stremio.com/#/addons?addon=";
-    const localHost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
-      ? "127.0.0.1:" + window.location.port
-      : window.location.host;
-    const addonOrigin = window.location.protocol + "//" + localHost;
+    const addonOrigin = window.location.origin;
+    const manifestUrl = addonOrigin + "/manifest.json";
+    const installUrl = manifestUrl.replace(/^https?:\/\//, "stremio://");
     const installLink = document.getElementById("installLink");
-    const desktopInstallLink = document.getElementById("desktopInstallLink");
     const webInstallLink = document.getElementById("webInstallLink");
-    const tmdbKeyInput = document.getElementById("tmdbKeyInput");
-    const tmdbAccessTokenInput = document.getElementById("tmdbAccessTokenInput");
-    const updateConfigButton = document.getElementById("updateConfigButton");
     const manifestUrlEl = document.getElementById("manifestUrl");
     const copyButton = document.getElementById("copyManifestButton");
     const copyStatus = document.getElementById("copyStatus");
 
-    function encodeConfig(config) {
-      const json = JSON.stringify(config);
-      return btoa(json).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-    }
-
-    function getManifestUrl() {
-      const tmdbKey = tmdbKeyInput.value.trim();
-      const tmdbAccessToken = tmdbAccessTokenInput.value.trim();
-      if (!tmdbKey || !tmdbAccessToken) return addonOrigin + "/manifest.json";
-
-      return addonOrigin + "/configure/" + encodeConfig({ tmdbKey, tmdbAccessToken }) + "/manifest.json";
-    }
-
-    function getDesktopInstallUrl(manifestUrl) {
-      return manifestUrl.replace(/^https?:\/\//, "stremio://");
-    }
-
-    function updateLinks() {
-      const manifestUrl = getManifestUrl();
-      const installUrl = getDesktopInstallUrl(manifestUrl);
-
-      installLink.href = installUrl;
-      desktopInstallLink.href = installUrl;
-      webInstallLink.href = webBaseUrl + encodeURIComponent(manifestUrl);
-      manifestUrlEl.textContent = manifestUrl;
-      copyStatus.textContent = "";
-
-      const ready = Boolean(tmdbKeyInput.value.trim() && tmdbAccessTokenInput.value.trim());
-      webInstallLink.classList.toggle("disabled-link", !ready);
-      desktopInstallLink.classList.toggle("disabled-link", !ready);
-    }
-
-    updateLinks();
+    installLink.href = installUrl;
+    webInstallLink.href = webBaseUrl + encodeURIComponent(manifestUrl);
+    manifestUrlEl.textContent = manifestUrl;
 
     installLink.addEventListener("click", (event) => {
       event.preventDefault();
-      window.location.href = getDesktopInstallUrl(getManifestUrl());
+      window.location.href = installUrl;
     });
 
-    updateConfigButton.addEventListener("click", updateLinks);
-    tmdbKeyInput.addEventListener("input", updateLinks);
-    tmdbAccessTokenInput.addEventListener("input", updateLinks);
-
     copyButton.addEventListener("click", async () => {
-      const manifestUrl = getManifestUrl();
       try {
         await navigator.clipboard.writeText(manifestUrl);
         copyStatus.textContent = "Copied";

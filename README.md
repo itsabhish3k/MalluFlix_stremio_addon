@@ -16,9 +16,10 @@ MalluFlix does not host, store, scrape, or distribute video content. It only pro
 
 - Node.js
 - npm
-- A TMDB API key is recommended
+- TMDB API key
+- TMDB read access token
 
-The project includes the original public TMDB key as a fallback, but for reliable use you should set your own key.
+TMDB credentials are configured on the server. Users do not enter TMDB credentials in Stremio.
 
 ## Run Locally
 
@@ -48,7 +49,7 @@ The Stremio manifest is:
 http://127.0.0.1:7000/manifest.json
 ```
 
-## Optional TMDB Credentials
+## TMDB Credentials
 
 PowerShell:
 
@@ -74,7 +75,7 @@ TMDB_API_KEY=your_tmdb_key TMDB_ACCESS_TOKEN=your_tmdb_read_access_token npm sta
 
 ## Install In Stremio
 
-After the server is running, open this in a browser:
+For local testing, after the server is running, open this in a browser:
 
 ```text
 stremio://127.0.0.1:7000/manifest.json
@@ -82,25 +83,15 @@ stremio://127.0.0.1:7000/manifest.json
 
 You can also open the landing page at `http://127.0.0.1:7000/` and click the install button.
 
-## Configure TMDB Credentials
-
-Open the landing page:
+For a hosted deployment, users install:
 
 ```text
-http://127.0.0.1:7000/
+https://your-render-service.onrender.com/manifest.json
 ```
-
-Paste your TMDB API key and TMDB read access token into the configuration fields. The page will generate a configured manifest URL like:
-
-```text
-http://127.0.0.1:7000/configure/{encoded_config}/manifest.json
-```
-
-Use the `Open in Stremio Web` link for browser-based install, or copy the generated manifest URL into Stremio manually.
 
 ## Permanent Render Deployment
 
-Local URLs and tunnel URLs are only for testing. For a permanent addon, deploy this project to Render and install from the Render HTTPS URL.
+Local URLs and tunnel URLs are only for testing. For a permanent addon, deploy this project to Render and install from the Render HTTPS manifest URL.
 
 This repo includes `render.yaml`, so Render can use:
 
@@ -108,16 +99,21 @@ This repo includes `render.yaml`, so Render can use:
 - Start command: `npm start`
 - Health check: `/manifest.json`
 
+Set these Render environment variables:
+
+- `TMDB_API_KEY`
+- `TMDB_ACCESS_TOKEN`
+
 After deploying, open:
 
 ```text
-https://your-render-service.onrender.com/configure
+https://your-render-service.onrender.com/
 ```
 
-Paste your TMDB API key and read access token, then install using `Open in Stremio Web` or copy the generated manifest URL. The permanent configured manifest will look like:
+Users install this manifest:
 
 ```text
-https://your-render-service.onrender.com/configure/{encoded_config}/manifest.json
+https://your-render-service.onrender.com/manifest.json
 ```
 
 Do not install from `127.0.0.1` or a temporary tunnel if you need the addon to keep working after your computer is off.
@@ -125,7 +121,6 @@ Do not install from `127.0.0.1` or a temporary tunnel if you need the addon to k
 ## Endpoints
 
 - `/manifest.json`
-- `/configure/{encoded_config}/manifest.json`
 - `/catalog/movie/malluflix_catalog.json`
 - `/catalog/movie/malluflix_ott.json`
 - `/catalog/movie/malluflix_future.json`
@@ -136,4 +131,4 @@ Do not install from `127.0.0.1` or a temporary tunnel if you need the addon to k
 
 - On Windows PowerShell, `npm` may be blocked by execution policy. Use `npm.cmd` as shown above.
 - `node server.js` and `node index.js` both start the addon.
-- Configured URLs contain encoded TMDB credentials. Treat configured manifest URLs like secrets.
+- Do not commit TMDB credentials to GitHub. Put them in Render environment variables.
