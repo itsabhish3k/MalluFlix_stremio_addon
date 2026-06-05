@@ -57,24 +57,24 @@
           </span>
 
           <span class="block mt-3 text-xl font-medium tracking-wide text-slate-600 sm:text-2xl md:text-3xl">
-            The only addon for Malayalam movies catalogz
+            The Malayalam movie catalog addon
           </span>
 
         </h1>
 
         <p class="mx-auto text-lg leading-snug text-slate-500 lg:w-1/2">
-          Powered by cutting-edge technology, outdated code, and your neighbour’s Wi-Fi. <3 
+          Powered by TMDB discovery and Stremio-compatible metadata.
         </p>
         
       </div>
-      <div class="relative z-10 w-full mt-12 flex justify-center">
+      <div class="relative z-10 w-full mt-12 flex flex-col items-center justify-center">
         <div class="flex items-center space-x-6 bg-white px-6 py-4 rounded-xl">
 
 
 
           <!-- Github Repo Link button -->
 
-           <a id=""  href="https://github.com/forzayt/MalluFlix_Forzayt_stremio" target="_blank">
+           <a id=""  href="https://github.com/forzayt/MalluFlix_stremio_addon" target="_blank">
            
           
           <button>
@@ -120,7 +120,7 @@
           <!-- custom among us install button  -->
 
           <a id="installLink"  href="#">
-          <button>
+          <button type="button">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36" width="36px" height="36px">
               <rect width="36" height="36" x="0" y="0" fill="#fdd835"></rect>
               <path fill="#e53935"
@@ -209,6 +209,29 @@
 
 
         </div>
+        <div class="config-panel">
+          <label for="tmdbKeyInput">TMDB API key</label>
+          <div class="config-row">
+            <input id="tmdbKeyInput" type="password" placeholder="Paste your TMDB API key" autocomplete="off">
+          </div>
+          <label for="tmdbAccessTokenInput">TMDB read access token</label>
+          <div class="config-row">
+            <input id="tmdbAccessTokenInput" type="password" placeholder="Paste your TMDB API read access token" autocomplete="off">
+            <button id="updateConfigButton" class="manifest-copy-button" type="button">Update Links</button>
+          </div>
+          <div class="config-actions">
+            <a id="webInstallLink" href="#" target="_blank" rel="noreferrer">Open in Stremio Web</a>
+            <a id="desktopInstallLink" href="#">Install in Stremio Desktop</a>
+          </div>
+        </div>
+        <p class="mt-4 text-sm text-center text-slate-500">
+          Stremio Desktop must be installed for the Install button to open.
+          <br>
+          If nothing opens, copy this manifest URL into Stremio:
+          <code id="manifestUrl" class="manifest-url"></code>
+          <button id="copyManifestButton" class="manifest-copy-button" type="button">Copy</button>
+          <span id="copyStatus" class="copy-status" aria-live="polite"></span>
+        </p>
       </div>
 
     </div>
@@ -223,8 +246,73 @@
 
 
   <script>
-    const installUrl = "stremio://" + window.location.host + "/manifest.json";
-    document.getElementById("installLink").href = installUrl;
+    const webBaseUrl = "https://web.stremio.com/#/addons?addon=";
+    const localHost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+      ? "127.0.0.1:" + window.location.port
+      : window.location.host;
+    const addonOrigin = window.location.protocol + "//" + localHost;
+    const installLink = document.getElementById("installLink");
+    const desktopInstallLink = document.getElementById("desktopInstallLink");
+    const webInstallLink = document.getElementById("webInstallLink");
+    const tmdbKeyInput = document.getElementById("tmdbKeyInput");
+    const tmdbAccessTokenInput = document.getElementById("tmdbAccessTokenInput");
+    const updateConfigButton = document.getElementById("updateConfigButton");
+    const manifestUrlEl = document.getElementById("manifestUrl");
+    const copyButton = document.getElementById("copyManifestButton");
+    const copyStatus = document.getElementById("copyStatus");
+
+    function encodeConfig(config) {
+      const json = JSON.stringify(config);
+      return btoa(json).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    }
+
+    function getManifestUrl() {
+      const tmdbKey = tmdbKeyInput.value.trim();
+      const tmdbAccessToken = tmdbAccessTokenInput.value.trim();
+      if (!tmdbKey || !tmdbAccessToken) return addonOrigin + "/manifest.json";
+
+      return addonOrigin + "/configure/" + encodeConfig({ tmdbKey, tmdbAccessToken }) + "/manifest.json";
+    }
+
+    function getDesktopInstallUrl(manifestUrl) {
+      return manifestUrl.replace(/^https?:\/\//, "stremio://");
+    }
+
+    function updateLinks() {
+      const manifestUrl = getManifestUrl();
+      const installUrl = getDesktopInstallUrl(manifestUrl);
+
+      installLink.href = installUrl;
+      desktopInstallLink.href = installUrl;
+      webInstallLink.href = webBaseUrl + encodeURIComponent(manifestUrl);
+      manifestUrlEl.textContent = manifestUrl;
+      copyStatus.textContent = "";
+
+      const ready = Boolean(tmdbKeyInput.value.trim() && tmdbAccessTokenInput.value.trim());
+      webInstallLink.classList.toggle("disabled-link", !ready);
+      desktopInstallLink.classList.toggle("disabled-link", !ready);
+    }
+
+    updateLinks();
+
+    installLink.addEventListener("click", (event) => {
+      event.preventDefault();
+      window.location.href = getDesktopInstallUrl(getManifestUrl());
+    });
+
+    updateConfigButton.addEventListener("click", updateLinks);
+    tmdbKeyInput.addEventListener("input", updateLinks);
+    tmdbAccessTokenInput.addEventListener("input", updateLinks);
+
+    copyButton.addEventListener("click", async () => {
+      const manifestUrl = getManifestUrl();
+      try {
+        await navigator.clipboard.writeText(manifestUrl);
+        copyStatus.textContent = "Copied";
+      } catch {
+        copyStatus.textContent = "Copy this URL manually";
+      }
+    });
   </script>
   <script src="js/app.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/alpinejs/alpine@v2.x.x/dist/alpine.min.js" defer></script>

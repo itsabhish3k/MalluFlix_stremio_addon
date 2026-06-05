@@ -3,11 +3,15 @@
   "version": "1.0.0",
   "description": "Base Stremio addon for MalluFlix",
   "main": "server.js",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
-    "stremio-addon-sdk": "^1.1.0",
-    "axios": "^1.6.0"
+    "axios": "^1.6.0",
+    "express": "^4.18.2",
+    "stremio-addon-sdk": "^1.1.0"
   }
 }

@@ -1,139 +1,139 @@
+# MalluFlix Stremio Addon
 
+MalluFlix is a Malayalam movie catalog addon for Stremio. It uses TMDB to discover Malayalam movies, converts TMDB movie IDs to IMDb IDs, and lets Stremio/Cinemeta provide normal metadata compatibility.
 
+MalluFlix does not host, store, scrape, or distribute video content. It only provides catalog and metadata entries.
 
-# 🎬 MalluFlix – Malayalam Movie Catalog Addon for Stremio
+## Features
 
-MalluFlix is a lightweight **Malayalam-only discovery addon** for Stremio.
-It uses TMDB for identifying Malayalam films and Cinemeta for official Stremio-compatible metadata, allowing other streaming addons to automatically attach available streams.
+- Malayalam movie catalogs
+- New releases, OTT releases, future releases, and genre catalogs
+- Stremio-compatible IMDb IDs
+- Catalog search support
+- Local in-memory API cache
 
-> **MalluFlix does NOT host, store, or distribute any video content.**
+## Requirements
 
----
+- Node.js
+- npm
+- A TMDB API key is recommended
 
-## ✨ Features
+The project includes the original public TMDB key as a fallback, but for reliable use you should set your own key.
 
-* 🇮🇳 Malayalam-only movie catalog
-* 🔍 Powered by TMDB language discovery
-* 🔗 Fully compatible with all Stremio streaming addons
-* ⚡ Infinite scroll with stable pagination
-* 🧠 Automatic IMDb ID resolution for ecosystem-native behavior
-* 🚫 No scraping, no illegal content, no file hosting
+## Run Locally
 
----
+From this folder:
 
-## 🧱 How It Works
-
-```
-Stremio App
-    ↓
-MalluFlix Addon
-    ↓
-TMDB (find Malayalam movies)
-    ↓
-IMDb ID mapping
-    ↓
-Cinemeta (official Stremio metadata)
-    ↓
-Other Streaming Addons attach streams automatically
+```powershell
+npm.cmd install
+npm.cmd start
 ```
 
-MalluFlix only provides **catalog & metadata**, never streams.
-
----
-
-## 🛠 Installation
-
-1. Clone the repository
-2. Install dependencies:
+If your terminal allows npm scripts directly, this also works:
 
 ```bash
 npm install
+npm start
 ```
 
-3. Add your TMDB API key in the source file:
+The addon starts on:
 
-```js
-const TMDB_KEY = "YOUR_TMDB_API_KEY";
+```text
+http://127.0.0.1:7000/
 ```
 
-4. Start the addon:
+The Stremio manifest is:
+
+```text
+http://127.0.0.1:7000/manifest.json
+```
+
+## Optional TMDB Credentials
+
+PowerShell:
+
+```powershell
+$env:TMDB_API_KEY="your_tmdb_key"
+$env:TMDB_ACCESS_TOKEN="your_tmdb_read_access_token"
+npm.cmd start
+```
+
+Command Prompt:
+
+```bat
+set TMDB_API_KEY=your_tmdb_key
+set TMDB_ACCESS_TOKEN=your_tmdb_read_access_token
+npm.cmd start
+```
+
+macOS/Linux:
 
 ```bash
-node index.js
+TMDB_API_KEY=your_tmdb_key TMDB_ACCESS_TOKEN=your_tmdb_read_access_token npm start
 ```
 
-5. Open in browser:
+## Install In Stremio
 
-```
-http://localhost:7000/manifest.json
-```
+After the server is running, open this in a browser:
 
-6. Install it into Stremio.
-``` 
-https://malluflix-forzayt-stremio.onrender.com/
+```text
+stremio://127.0.0.1:7000/manifest.json
 ```
 
+You can also open the landing page at `http://127.0.0.1:7000/` and click the install button.
 
-## 📦 Endpoints
+## Configure TMDB Credentials
 
-| Endpoint                                | Purpose                     |
-| --------------------------------------- | --------------------------- |
-| `/manifest.json`                        | Addon metadata              |
-| `/catalog/movie/malluflix_catalog.json` | Malayalam movie list        |
-| `/meta/movie/{imdb_id}.json`            | Movie metadata via Cinemeta |
+Open the landing page:
 
----
+```text
+http://127.0.0.1:7000/
+```
 
-## ⚖ Legal Disclaimer
+Paste your TMDB API key and TMDB read access token into the configuration fields. The page will generate a configured manifest URL like:
 
-MalluFlix:
+```text
+http://127.0.0.1:7000/configure/{encoded_config}/manifest.json
+```
 
-* ❌ Does NOT host or distribute copyrighted media
-* ❌ Does NOT scrape or index illegal sources
-* ❌ Does NOT provide streaming URLs
-* ✅ Only aggregates **public metadata**
-* ✅ Uses official APIs (TMDB, Cinemeta)
+Use the `Open in Stremio Web` link for browser-based install, or copy the generated manifest URL into Stremio manually.
 
-All trademarks, movie posters, and metadata belong to their respective owners.
+## Permanent Render Deployment
 
-The user is solely responsible for any third-party addons they install alongside MalluFlix.
+Local URLs and tunnel URLs are only for testing. For a permanent addon, deploy this project to Render and install from the Render HTTPS URL.
 
----
+This repo includes `render.yaml`, so Render can use:
 
-## 🧑‍⚖ Responsibility
+- Build command: `npm install`
+- Start command: `npm start`
+- Health check: `/manifest.json`
 
-This project exists only as a **catalog & metadata enhancer**.
+After deploying, open:
 
-Any media streams displayed inside Stremio are supplied by **external addons** that the user installs separately.
-MalluFlix has **no control over third-party stream sources**.
+```text
+https://your-render-service.onrender.com/configure
+```
 
----
+Paste your TMDB API key and read access token, then install using `Open in Stremio Web` or copy the generated manifest URL. The permanent configured manifest will look like:
 
-## 🤝 Contributing
+```text
+https://your-render-service.onrender.com/configure/{encoded_config}/manifest.json
+```
 
-Pull requests are welcome.
+Do not install from `127.0.0.1` or a temporary tunnel if you need the addon to keep working after your computer is off.
 
-Suggested improvements:
+## Endpoints
 
-* Malayalam keyword detection refinement
-* Local caching
-* Performance optimizations
+- `/manifest.json`
+- `/configure/{encoded_config}/manifest.json`
+- `/catalog/movie/malluflix_catalog.json`
+- `/catalog/movie/malluflix_ott.json`
+- `/catalog/movie/malluflix_future.json`
+- `/catalog/movie/malluflix_genre_action.json`
+- `/meta/movie/{imdb_id}.json`
 
----
+## Notes
 
-## 🧠 Credits
-
-* [TMDB](https://www.themoviedb.org/)
-* [Stremio Cinemeta](https://github.com/Stremio/stremio-addons)
-* Stremio Addon SDK
-
----
-
-## ❤️ Support
-
-If you enjoy this project, you can support development via
-**Buy Me A Coffee** ☕ on the [website](https://malluflix-forzayt-stremio.onrender.com/).
-
----
-
-
+- On Windows PowerShell, `npm` may be blocked by execution policy. Use `npm.cmd` as shown above.
+- `node server.js` and `node index.js` both start the addon.
+- Configured URLs contain encoded TMDB credentials. Treat configured manifest URLs like secrets.

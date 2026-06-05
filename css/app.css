@@ -2677,3 +2677,103 @@ button:hover .play {
   transform: translateX(200%);
   transition-delay: 300ms;
 }
+
+.manifest-url {
+  display: inline-block;
+  max-width: min(90vw, 28rem);
+  margin: 0 .35rem;
+  overflow-wrap: anywhere;
+  vertical-align: middle;
+}
+
+.config-panel {
+  width: min(92vw, 42rem);
+  margin-top: 1rem;
+  padding: 1rem;
+  color: #334155;
+  text-align: left;
+  background: rgba(255, 255, 255, .94);
+  border: 1px solid #e2e8f0;
+  border-radius: .5rem;
+}
+
+.config-panel label {
+  display: block;
+  margin-bottom: .5rem;
+  font-size: .875rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.config-panel label:not(:first-child) {
+  margin-top: .75rem;
+}
+
+.config-row {
+  display: flex;
+  gap: .5rem;
+  align-items: center;
+}
+
+.config-row input {
+  min-width: 0;
+  flex: 1;
+  border-color: #cbd5e1;
+  border-radius: .375rem;
+}
+
+.config-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .75rem;
+  margin-top: .75rem;
+  font-size: .875rem;
+  font-weight: 700;
+}
+
+.config-actions a {
+  color: #1d4ed8;
+  text-decoration: underline;
+}
+
+.config-actions a.disabled-link {
+  color: #94a3b8;
+  pointer-events: none;
+  text-decoration: none;
+}
+
+button.manifest-copy-button {
+  display: inline-flex;
+  min-height: 1.75rem;
+  padding: 0 .75rem;
+  color: #111827;
+  text-shadow: none;
+  text-transform: none;
+  border: 1px solid #cbd5e1;
+  letter-spacing: 0;
+  font-size: .875rem;
+  font-weight: 600;
+  line-height: 1;
+  background-color: #ffffff;
+  border-radius: .375rem;
+  overflow: visible;
+  transition: border-color .15s ease, background-color .15s ease;
+}
+
+button.manifest-copy-button:hover {
+  background-color: #f8fafc;
+  border-color: #94a3b8;
+}
+
+.copy-status {
+  display: inline-block;
+  min-width: 4rem;
+  margin-left: .35rem;
+}
+
+@media (max-width: 640px) {
+  .config-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

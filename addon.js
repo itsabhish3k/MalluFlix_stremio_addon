@@ -1,7 +1,11 @@
 const { addonBuilder } = require("stremio-addon-sdk");
 const axios = require("axios");
 
-const TMDB_KEY = "b8e31efed6de570178942a39601e84b0";
+const DEFAULT_TMDB_KEY = process.env.TMDB_API_KEY || process.env.TMDB_KEY || "b8e31efed6de570178942a39601e84b0";
+const DEFAULT_TMDB_ACCESS_TOKEN = process.env.TMDB_ACCESS_TOKEN || process.env.TMDB_READ_ACCESS_TOKEN || "";
+const TMDB_DISCOVER_URL = "https://api.themoviedb.org/3/discover/movie";
+const TMDB_SEARCH_URL = "https://api.themoviedb.org/3/search/movie";
+const CACHE_EXPIRY = 24 * 60 * 60 * 1000;
 
 const GENRES = {
     "Action": 28,
@@ -21,163 +25,214 @@ const GENRES = {
     "Thriller": 53
 };
 
-const manifest = {
-    id: "org.mallu.flix",
-    version: "3.0.0",
-    name: "MalluFlix",
-    description: "Malayalam movie catalog using TMDB discovery + Cinemeta compatibility",
-    logo: "https://forzayt.github.io/MalluFlix_stremio_addon/images/logo.jpg",
-    resources: ["catalog", "meta"],
-    types: ["movie"],
-    catalogs: [
-        {
-            type: "movie",
-            id: "malluflix_catalog",
-            name: "MalluFlix New Releases",
-            extra: [{ name: "search" }, { name: "skip" }]
-        },
-        {
-            type: "movie",
-            id: "malluflix_ott",
-            name: "MalluFlix OTT Released",
-            extra: [{ name: "search" }, { name: "skip" }]
-        },
-        {
-            type: "movie",
-            id: "malluflix_future",
-            name: "MalluFlix Future Releases",
-            extra: [{ name: "search" }, { name: "skip" }]
-        },
-        ...Object.keys(GENRES).map(name => ({
-            type: "movie",
-            id: `malluflix_genre_${name.toLowerCase().replace(/\s+/g, '_')}`,
-            name: `MalluFlix ${name}`,
-            extra: [{ name: "search" }, { name: "skip" }]
-        }))
-    ],
-    idPrefixes: ["tt"]
-};
+function createManifest(options = {}) {
+    const configured = Boolean(options.configured);
 
-const builder = new addonBuilder(manifest);
-
-const CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 1 day in milliseconds
-const cache = new Map();
-
-async function fetchWithCache(url, config = {}) {
-    const key = url + JSON.stringify(config.params || {});
-    const cached = cache.get(key);
-
-    if (cached && (Date.now() - cached.timestamp < CACHE_EXPIRY)) {
-        console.log(`Cache hit for: ${url}`);
-        return cached.data;
-    }
-
-    console.log(`Cache miss for: ${url}. Fetching...`);
-    const response = await axios.get(url, config);
-    cache.set(key, {
-        data: response.data,
-        timestamp: Date.now()
-    });
-    return response.data;
-}
-
-/* Convert TMDB → IMDb ID */
-async function tmdbToImdb(tmdbId) {
-    try {
-        const data = await fetchWithCache(
-            `https://api.themoviedb.org/3/movie/${tmdbId}/external_ids`,
-            { params: { api_key: TMDB_KEY } }
-        );
-        return data.imdb_id;
-    } catch {
-        return null;
-    }
-}
-
-/* Malayalam Catalog */
-builder.defineCatalogHandler(async ({ type, id, extra }) => {
-    const isGenreCatalog = id.startsWith("malluflix_genre_");
-    if (type !== "movie" || (!["malluflix_catalog", "malluflix_ott", "malluflix_future"].includes(id) && !isGenreCatalog)) return { metas: [] };
-
-    const skip = extra?.skip ? parseInt(extra.skip) : 0;
-    const page = Math.round(skip / 20) + 1;
-    const today = new Date().toISOString().split('T')[0];
-
-    const params = {
-        api_key: TMDB_KEY,
-        with_original_language: "ml",
-        sort_by: "primary_release_date.desc",
+    return {
+        id: "org.mallu.flix",
+        version: "3.1.0",
+        name: "MalluFlix",
+        description: "Malayalam movie catalog using TMDB discovery + Cinemeta compatibility",
+        logo: "https://forzayt.github.io/MalluFlix_stremio_addon/images/logo.jpg",
+        resources: ["catalog", "meta"],
+        types: ["movie"],
+        catalogs: [
+            {
+                type: "movie",
+                id: "malluflix_catalog",
+                name: "MalluFlix New Releases",
+                extra: [{ name: "search" }, { name: "skip" }]
+            },
+            {
+                type: "movie",
+                id: "malluflix_ott",
+                name: "MalluFlix OTT Released",
+                extra: [{ name: "search" }, { name: "skip" }]
+            },
+            {
+                type: "movie",
+                id: "malluflix_future",
+                name: "MalluFlix Future Releases",
+                extra: [{ name: "search" }, { name: "skip" }]
+            },
+            ...Object.keys(GENRES).map(name => ({
+                type: "movie",
+                id: `malluflix_genre_${name.toLowerCase().replace(/\s+/g, "_")}`,
+                name: `MalluFlix ${name}`,
+                extra: [{ name: "search" }, { name: "skip" }]
+            }))
+        ],
+        idPrefixes: ["tt"],
+        behaviorHints: {
+            adult: false,
+            configurable: true,
+            configurationRequired: !configured,
+            p2p: false
+        }
     };
+}
 
-    if (id === "malluflix_ott") {
-        // Filter for Digital releases (4) in India
-        params["release_date.lte"] = today;
-        params.with_release_type = "4|5"; // 4 = Digital, 5 = Physical
-        params.region = "IN";
-        params.sort_by = "release_date.desc";
-    } else if (id === "malluflix_future") {
-        // Filter for Future releases (greater than today)
-        params["primary_release_date.gte"] = today;
-        params.sort_by = "primary_release_date.asc"; // Show soonest releases first
-    } else if (isGenreCatalog) {
-        // Extract genre name from ID and find corresponding ID
+function createAddonInterface(options = {}) {
+    const tmdbKey = options.tmdbKey || DEFAULT_TMDB_KEY;
+    const tmdbAccessToken = (options.tmdbAccessToken || DEFAULT_TMDB_ACCESS_TOKEN).replace(/^Bearer\s+/i, "");
+    const cache = new Map();
+    const builder = new addonBuilder(createManifest({
+        configured: Boolean(options.tmdbKey && options.tmdbAccessToken)
+    }));
+
+    async function fetchWithCache(url, config = {}) {
+        const key = url + JSON.stringify(config.params || {}) + JSON.stringify(config.headers || {});
+        const cached = cache.get(key);
+
+        if (cached && (Date.now() - cached.timestamp < CACHE_EXPIRY)) {
+            console.log(`Cache hit for: ${url}`);
+            return cached.data;
+        }
+
+        console.log(`Cache miss for: ${url}. Fetching...`);
+        const response = await axios.get(url, config);
+        cache.set(key, {
+            data: response.data,
+            timestamp: Date.now()
+        });
+        return response.data;
+    }
+
+    function tmdbRequestConfig(params = {}) {
+        const request = {
+            params: {
+                ...params,
+                api_key: tmdbKey
+            }
+        };
+
+        if (tmdbAccessToken) {
+            request.headers = {
+                Authorization: `Bearer ${tmdbAccessToken}`
+            };
+        }
+
+        return request;
+    }
+
+    function getGenreIdFromCatalogId(id) {
         const genreName = id.replace("malluflix_genre_", "");
-        const genreId = Object.entries(GENRES).find(([name]) => name.toLowerCase().replace(/\s+/g, '_') === genreName)?.[1];
-        
-        if (genreId) {
+        return Object.entries(GENRES).find(([name]) => (
+            name.toLowerCase().replace(/\s+/g, "_") === genreName
+        ))?.[1];
+    }
+
+    async function tmdbToImdb(tmdbId) {
+        try {
+            const data = await fetchWithCache(
+                `https://api.themoviedb.org/3/movie/${tmdbId}/external_ids`,
+                tmdbRequestConfig()
+            );
+            return data.imdb_id;
+        } catch {
+            return null;
+        }
+    }
+
+    async function toStremioMeta(movie) {
+        const imdb = await tmdbToImdb(movie.id);
+        if (!imdb) return null;
+
+        return {
+            id: imdb,
+            type: "movie",
+            name: movie.title,
+            poster: movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : null,
+            description: movie.overview,
+            releaseInfo: movie.release_date ? movie.release_date.slice(0, 4) : undefined
+        };
+    }
+
+    async function mapMoviesToMetas(results) {
+        const batchSize = 5;
+        const validMetas = [];
+        const seen = new Set();
+
+        for (let i = 0; i < results.length; i += batchSize) {
+            const chunkResults = await Promise.all(results.slice(i, i + batchSize).map(toStremioMeta));
+
+            for (const meta of chunkResults) {
+                if (!meta || seen.has(meta.id)) continue;
+                seen.add(meta.id);
+                validMetas.push(meta);
+            }
+        }
+
+        return validMetas;
+    }
+
+    builder.defineCatalogHandler(async ({ type, id, extra }) => {
+        const isGenreCatalog = id.startsWith("malluflix_genre_");
+        const supportedCatalogs = ["malluflix_catalog", "malluflix_ott", "malluflix_future"];
+
+        if (type !== "movie" || (!supportedCatalogs.includes(id) && !isGenreCatalog)) {
+            return { metas: [] };
+        }
+
+        const skip = extra?.skip ? parseInt(extra.skip, 10) : 0;
+        const page = Math.floor(skip / 20) + 1;
+        const today = new Date().toISOString().split("T")[0];
+        const search = extra?.search?.trim();
+
+        const params = {
+            with_original_language: "ml"
+        };
+
+        if (search) {
+            params.query = search;
+            params.include_adult = false;
+        } else if (id === "malluflix_ott") {
+            params["release_date.lte"] = today;
+            params.with_release_type = "4|5";
+            params.region = "IN";
+            params.sort_by = "release_date.desc";
+        } else if (id === "malluflix_future") {
+            params["primary_release_date.gte"] = today;
+            params.sort_by = "primary_release_date.asc";
+        } else if (isGenreCatalog) {
+            const genreId = getGenreIdFromCatalogId(id);
+
+            if (genreId) {
+                params["primary_release_date.lte"] = today;
+                params.with_genres = genreId.toString();
+                params.sort_by = "primary_release_date.desc";
+            }
+        } else {
             params["primary_release_date.lte"] = today;
-            params.with_genres = genreId.toString();
             params.sort_by = "primary_release_date.desc";
         }
-    } else {
-        // Default: All Malayalam releases
-        params["primary_release_date.lte"] = today;
-        params.sort_by = "primary_release_date.desc";
-    }
 
-    // Fetch 3 pages to ensure sufficient content
-    const promises = [page, page + 1, page + 2].map(p =>
-        fetchWithCache("https://api.themoviedb.org/3/discover/movie", {
-            params: { ...params, page: p }
-        })
-    );
+        const requestUrl = search ? TMDB_SEARCH_URL : TMDB_DISCOVER_URL;
+        const pages = search ? [page] : [page, page + 1, page + 2];
+        const responses = await Promise.all(pages.map(p =>
+            fetchWithCache(requestUrl, tmdbRequestConfig({ ...params, page: p }))
+        ));
 
-    const responses = await Promise.all(promises);
-    const results = responses.flatMap(r => r.results || []);
+        const results = responses
+            .flatMap(r => r.results || [])
+            .filter(movie => movie.original_language === "ml");
 
-    // Process items in chunks to avoid hitting API rate limits (429)
-    const batchSize = 5;
-    const validMetas = [];
+        return { metas: await mapMoviesToMetas(results) };
+    });
 
-    for (let i = 0; i < results.length; i += batchSize) {
-        const chunk = results.slice(i, i + batchSize);
-        const chunkPromises = chunk.map(async (m) => {
-            const imdb = await tmdbToImdb(m.id);
-            if (!imdb) return null;
-            return {
-                id: imdb,
-                type: "movie",
-                name: m.title,
-                poster: m.poster_path ? `https://image.tmdb.org/t/p/w500${m.poster_path}` : null,
-                description: m.overview
-            };
-        });
+    builder.defineMetaHandler(async ({ type, id }) => {
+        if (type !== "movie") return { meta: null };
 
-        const chunkResults = await Promise.all(chunkPromises);
-        validMetas.push(...chunkResults.filter(m => m !== null));
-    }
+        const data = await fetchWithCache(
+            `https://v3-cinemeta.strem.io/meta/movie/${id}.json`
+        );
+        return { meta: data.meta || data };
+    });
 
-    return { metas: validMetas };
-});
+    return builder.getInterface();
+}
 
-/* Cinemeta Metadata */
-builder.defineMetaHandler(async ({ type, id }) => {
-    if (type !== "movie") return { meta: null };
-
-    const data = await fetchWithCache(
-        `https://v3-cinemeta.strem.io/meta/movie/${id}.json`
-    );
-    return { meta: data.meta || data };
-});
-
-module.exports = builder.getInterface();
+module.exports = createAddonInterface();
+module.exports.createAddonInterface = createAddonInterface;
+module.exports.DEFAULT_TMDB_KEY = DEFAULT_TMDB_KEY;
+module.exports.DEFAULT_TMDB_ACCESS_TOKEN = DEFAULT_TMDB_ACCESS_TOKEN;
